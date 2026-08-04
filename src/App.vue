@@ -13,16 +13,15 @@ interface Tarea {
   completada: boolean;
   prioridad?: Prioridad;
   archivada?: boolean; // Saber si la tarea está en el historial
+  fechaVencimiento?: string;
 }
 
 //Variables reactivas
 const nuevaTarea = ref(''); //guarda lo que el usuario escribe en el input
 const tareas = ref<Tarea[]>([]); //Lista que guarda todas las tareas
 const filtro = ref<'todas'| 'pendientes' | 'completadas'| 'archivadas'>('todas'); //Para saber qué el filtro está activo
-
 //Estado para la barra de búsqueda
 const busqueda = ref('');
-
 //Estado para controlar el Modo Oscuro
 const modoOscuro = ref(false);
 
@@ -60,14 +59,15 @@ watch(tareas, (nuevasTareas) => {
 }, { deep: true });
 
 //Función para añadir una nueva tarea a la lista
-const agregarTarea = (textoNuevo: string, prioridadNueva: Prioridad = 'media') => {
+const agregarTarea = (textoNuevo: string, prioridadNueva: Prioridad = 'media', fechaNueva: string = '') => {
   if (textoNuevo.trim() === '') return;
   tareas.value.push({
     id: Date.now(),
     texto: textoNuevo,
     completada: false,
     prioridad: prioridadNueva,
-    archivada: false
+    archivada: false,
+    fechaVencimiento: fechaNueva
   });
   nuevaTarea.value = '';
 };

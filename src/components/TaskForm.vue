@@ -5,26 +5,28 @@ type Prioridad = 'baja' | 'media' | 'alta';
 
 //Define emits le dice a Vue que eventos puede enviar este componente hacia arriba
 const emit = defineEmits<{
-  (e: 'Agregar', texto: string, prioridad: Prioridad): void;
+  (e: 'Agregar', texto: string, prioridad: Prioridad, fechaVencimiento: string): void;
 }>();
 
-const nuevaTarea = ref('');
+const textoNuevaTarea = ref('');
 const prioridadSeleccionada = ref<Prioridad>('media'); // Valor por defecto
+const fechaSeleccionada = ref('');
 
-const enviarTarea = () => {
-  if (nuevaTarea.value.trim() === '') return;
+const manejarEnvio = () => {
+  if (textoNuevaTarea.value.trim() === '') return;
   //En vez de agregarla aquí, emite el evento con el texto y la prioridad para que App.vue lo reciba y agregue la tarea a la lista
-  emit('Agregar', nuevaTarea.value, prioridadSeleccionada.value);
-  nuevaTarea.value = '';
-  prioridadSeleccionada.value = 'media'; //Reinicia la prioridad al valor por defecto después de agregar la tarea
+  emit('Agregar', textoNuevaTarea.value, prioridadSeleccionada.value, fechaSeleccionada.value);
+  textoNuevaTarea.value = '';
+  prioridadSeleccionada.value = 'media'; // Reinicia la prioridad a la predeterminada
+  fechaSeleccionada.value = '';
 };
 </script>
 
 <template>
   <div class="entrada-datos">
     <input
-      v-model="nuevaTarea"
-      @keyup.enter="enviarTarea"
+      v-model="textoNuevaTarea"
+      @keyup.enter="manejarEnvio"
       type="text"
       placeholder="¿Qué necesitas hacer hoy?"
     />
@@ -36,7 +38,15 @@ const enviarTarea = () => {
       <option value="alta">🔴 Alta</option>
     </select>
 
-    <button class="btn-agregar" @click="enviarTarea">Agregar</button>
+    <!--Input para la Fecha de Vencimiento -->
+    <input 
+      v-model="fechaSeleccionada" 
+      type="date" 
+      class="input-fecha"
+      title="Fecha de vencimiento"
+    />
+
+    <button class="btn-agregar" @click="manejarEnvio">Agregar</button>
   </div>
 </template>
 
@@ -45,6 +55,7 @@ const enviarTarea = () => {
   display: flex;
   gap: 8px;
   margin-bottom: 20px;
+  flex-wrap: wrap; /* Mantiene la flexibilidad si la pantalla es estrecha */
 }
 
 input[type="text"] {
@@ -62,7 +73,8 @@ input[type="text"]::placeholder {
   color: var(--color-subtexto, #94a3b8);
 }
 
-.select-prioridad {
+.select-prioridad,
+.input-fecha {
   padding: 10px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
