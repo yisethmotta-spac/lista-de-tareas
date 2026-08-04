@@ -5,6 +5,7 @@ import TaskForm from './components/TaskForm.vue';
 import TaskItem from './components/TaskItem.vue';
 
 type Prioridad = 'baja' | 'media' | 'alta';
+type Categoria= 'general' | 'trabajo' | 'hogar'| 'estudio' | 'compras';
 
 //Definir que datos tiene una tarea
 interface Tarea {
@@ -12,6 +13,7 @@ interface Tarea {
   texto: string;
   completada: boolean;
   prioridad?: Prioridad;
+  categoria?: Categoria;
   archivada?: boolean; // Saber si la tarea está en el historial
   fechaVencimiento?: string;
 }
@@ -20,7 +22,8 @@ interface Tarea {
 const nuevaTarea = ref(''); //guarda lo que el usuario escribe en el input
 const tareas = ref<Tarea[]>([]); //Lista que guarda todas las tareas
 const filtro = ref<'todas'| 'pendientes' | 'completadas'| 'archivadas'>('todas'); //Para saber qué el filtro está activo
-//Estado para la barra de búsqueda
+// Filtro para categoría (incluye la opción 'todas')
+const filtroCategoria = ref<string>('todas');//Estado para la barra de búsqueda
 const busqueda = ref('');
 //Estado para controlar el Modo Oscuro
 const modoOscuro = ref(false);
@@ -59,13 +62,14 @@ watch(tareas, (nuevasTareas) => {
 }, { deep: true });
 
 //Función para añadir una nueva tarea a la lista
-const agregarTarea = (textoNuevo: string, prioridadNueva: Prioridad = 'media', fechaNueva: string = '') => {
+const agregarTarea = (textoNuevo: string, prioridadNueva: Prioridad = 'media', fechaNueva: string = '', categoriaNueva: Categoria = 'general') => {
   if (textoNuevo.trim() === '') return;
   tareas.value.push({
     id: Date.now(),
     texto: textoNuevo,
     completada: false,
     prioridad: prioridadNueva,
+    categoria: categoriaNueva,
     archivada: false,
     fechaVencimiento: fechaNueva
   });
@@ -132,9 +136,10 @@ const tareasFiltradas = computed(() => {
       coincideFiltro = !!t.archivada;
     }
 
+    const coincideCategoria = filtroCategoria.value === 'todas' || (t.categoria || 'general') === filtroCategoria.value;
     const coincideBusqueda = t.texto.toLowerCase().includes(busqueda.value.toLowerCase());
 
-    return coincideFiltro && coincideBusqueda;
+    return coincideFiltro && coincideCategoria && coincideBusqueda;
   });
 
   // Ordena las tareas para que Alta quede arriba, luego Media y al final Baja
@@ -176,7 +181,7 @@ const porcentajeProgreso = computed(() => {
         </button>
       </div>
 
-      <!-- NUEVO: Barra de progreso visual % -->
+      <!--Barra de progreso visual % -->
       <div class="seccion-progreso" v-if="tareas.length > 0">
         <div class="info-progreso">
           <span>Progreso</span>
@@ -187,7 +192,10 @@ const porcentajeProgreso = computed(() => {
         </div>
       </div>
 
-      <TaskForm @agregar="agregarTarea"/>
+      <!-- Escucha el evento de agregar tareas -->
+      <TaskForm 
+        @agregar="agregarTarea"
+      />
 
       <!-- Input para buscar tareas -->
       <div class="caja-busqueda" v-if="tareas.length > 0">
@@ -198,7 +206,17 @@ const porcentajeProgreso = computed(() => {
         />
       </div>
 
-       <div class="filtros">
+      <!-- Filtro de Categorias (solo se muestra si hay tareas creadas) -->
+      <div class="filtros-categoria" v-if="tareas.length > 0">
+        <button :class="{ activo: filtroCategoria === 'todas' }" @click="filtroCategoria = 'todas'">Todas</button>
+        <button :class="{ activo: filtroCategoria === 'general' }" @click="filtroCategoria = 'general'">📌 General</button>
+        <button :class="{ activo: filtroCategoria === 'trabajo' }" @click="filtroCategoria = 'trabajo'">💼 Trabajo</button>
+        <button :class="{ activo: filtroCategoria === 'hogar' }" @click="filtroCategoria = 'hogar'">🏠 Hogar</button>
+        <button :class="{ activo: filtroCategoria === 'estudio' }" @click="filtroCategoria = 'estudio'">📚 Estudio</button>
+        <button :class="{ activo: filtroCategoria === 'compras' }" @click="filtroCategoria = 'compras'">🛒 Compras</button>
+      </div> 
+
+      <div class="filtros">
         <button :class="{ activo: filtro === 'todas' }" @click="filtro = 'todas'">
           Todas </button>
         <button :class="{ activo: filtro === 'pendientes' }" @click="filtro = 'pendientes'">
@@ -245,8 +263,7 @@ const porcentajeProgreso = computed(() => {
               class="btn-accion btn-limpiar" 
               @click="archivarCompletadas"
               title="Mover tareas hechas al Historial"
-            >
-              📦 Archivar hechas
+            > 📦 Archivar hechas
             </button>
           </div>
         </div>
@@ -335,7 +352,7 @@ h1 {
 
 /*Estilos para la caja de búsqueda */
 .caja-busqueda {
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
 .caja-busqueda input {
@@ -347,6 +364,38 @@ h1 {
   color: var(--color-titulo);
   box-sizing: border-box;
   transition: background 0.3s, color 0.3s;
+}
+
+/* Estilos para el Filtro de Categorías */
+.filtros-categoria {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
+}
+
+.filtros-categoria button {
+  padding: 4px 10px;
+  font-size: 0.8em;
+  border: 1px solid #cbd5e1;
+  background: var(--bg-item);
+  color: var(--color-subtexto);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filtros-categoria button:hover {
+  border-color: #42b883;
+  color: #42b883;
+}
+
+.filtros-categoria button.activo {
+  background-color: #42b883;
+  color: white;
+  border-color: #42b883;
+  font-weight: bold;
 }
 
 /*Estilo para el botón de luna/sol */

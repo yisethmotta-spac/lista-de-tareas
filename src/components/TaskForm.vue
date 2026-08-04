@@ -2,15 +2,17 @@
 import { ref, computed } from 'vue'; 
 
 type Prioridad = 'baja' | 'media' | 'alta';
+type Categoria= 'general' | 'trabajo' | 'hogar'| 'estudio' | 'compras';
 
 //Define emits le dice a Vue que eventos puede enviar este componente hacia arriba
 const emit = defineEmits<{
-  (e: 'Agregar', texto: string, prioridad: Prioridad, fechaVencimiento: string): void;
+  (e: 'agregar', texto: string, prioridad: Prioridad, fechaVencimiento: string, categoria: Categoria): void;
 }>();
 
 const textoNuevaTarea = ref('');
 const prioridadSeleccionada = ref<Prioridad>('media'); // Valor por defecto
 const fechaSeleccionada = ref('');
+const categoriaSeleccionada = ref<Categoria>('general');
 const mensajeError = ref('');
 
 // Obtiene la fecha de hoy en formato YYYY-MM-DD para el atributo min del calendar
@@ -24,7 +26,6 @@ const fechaMinima = computed(() => {
 
 const manejarEnvio = () => {
   mensajeError.value = '';
-
   if (textoNuevaTarea.value.trim() === '') return;
 
   // Validación para impedir que se asignen fechas que ya pasaron
@@ -42,9 +43,10 @@ const manejarEnvio = () => {
   }
 
   //En vez de agregarla aquí, emite el evento con el texto y la prioridad para que App.vue lo reciba y agregue la tarea a la lista
-  emit('Agregar', textoNuevaTarea.value, prioridadSeleccionada.value, fechaSeleccionada.value);
+  emit('agregar', textoNuevaTarea.value, prioridadSeleccionada.value, fechaSeleccionada.value, categoriaSeleccionada.value);
   textoNuevaTarea.value = '';
   prioridadSeleccionada.value = 'media'; // Reinicia la prioridad a la predeterminada
+  categoriaSeleccionada.value = 'general'; // Reinicia la categoría a la predeterminada
   fechaSeleccionada.value = '';
   mensajeError.value = '';
 };
@@ -60,6 +62,15 @@ const manejarEnvio = () => {
         placeholder="Añade tus tareas aquí"
       />
       
+      <!-- Selector de Categoria -->
+      <select v-model="categoriaSeleccionada" class="select-opcion">
+        <option value="general">📌 General</option>
+        <option value="trabajo">💼 Trabajo</option>
+        <option value="hogar">🏠 Hogar</option>
+        <option value="estudio">📚 Estudio</option>
+        <option value="compras">🛒 Compras</option>
+      </select>
+
       <!-- Selector de Prioridad -->
       <select v-model="prioridadSeleccionada" class="select-prioridad">
         <option value="baja">🟢 Baja</option>
@@ -77,7 +88,7 @@ const manejarEnvio = () => {
         @change="mensajeError = ''"
       />
 
-      <button class="btn-agregar" @click="manejarEnvio">Agregar</button>
+      <button class="btn-agregar" @click="manejarEnvio">agregar</button>
     </div>
 
     <!-- Mensaje de advertencia si la fecha es menor al día actual -->
@@ -100,6 +111,7 @@ const manejarEnvio = () => {
 
 input[type="text"] {
   flex: 1;
+  min-width: 200px;
   padding: 10px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -114,6 +126,7 @@ input[type="text"]::placeholder {
 }
 
 .select-prioridad,
+.select-opcion,
 .input-fecha {
   padding: 10px;
   border: 1px solid #cbd5e1;

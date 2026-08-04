@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 
 type Prioridad = 'baja' | 'media' | 'alta';
+type Categoria= 'general' | 'trabajo' | 'hogar'| 'estudio' | 'compras';
 
 //Define la interfaz aquí también para que el componente sepa cómo luce una tarea
 // (La prioridad es opcional '?' para soportar tareas viejas que no la tenían)
@@ -12,6 +13,7 @@ interface Tarea {
   prioridad?: Prioridad;
   archivada?: boolean; // Saber si la tarea está en el historial
   fechaVencimiento?: string;
+  categoria?: Categoria;
 }
 
 //DefineProps recibe los datos desde App.vue
@@ -32,6 +34,15 @@ const textoEditado = ref(props.tarea.texto);
 
 // Si la tarea no tiene prioridad asignada aún, usa 'media' por defecto para evitar fallos
 const prioridadEfectiva = props.tarea.prioridad || 'media';
+const categoriaEfectiva = props.tarea.categoria || 'general';
+
+const iconosCategoria: Record<Categoria, string> = {
+  general: '📌 General',
+  trabajo: '💼 Trabajo',
+  hogar: '🏠 Hogar',
+  estudio: '📚 Estudio',
+  compras: '🛒 Compras'
+};
 
 // Evaluación del estado y formato de la fecha de vencimiento
 const estadoFecha = computed(() => {
@@ -111,6 +122,12 @@ const cancelarEdicion = () => {
         </span>
       </div>
 
+      <!-- Insignia de Categoria -->
+      <span class="insignia-categoria">
+        {{ iconosCategoria[categoriaEfectiva] }}
+      </span>
+
+      <!-- Insignia de Prioridad -->  
       <span :class="['insignia-prioridad', prioridadEfectiva]">
         {{ prioridadEfectiva.toUpperCase() }}
       </span>
@@ -184,6 +201,15 @@ span {
 .tachado {
   text-decoration: line-through;
   color: #94a3b8;
+}
+
+.insignia-categoria {
+  font-size: 0.75em;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--color-titulo, #475569);
+  flex: none;
 }
 
 .insignia-prioridad {
