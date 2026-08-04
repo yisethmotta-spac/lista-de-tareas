@@ -57,7 +57,7 @@ const manejarEnvio = () => {
         v-model="textoNuevaTarea"
         @keyup.enter="manejarEnvio"
         type="text"
-        placeholder="¿Qué necesitas hacer hoy?"
+        placeholder="Añade tus tareas aquí"
       />
       
       <!-- Selector de Prioridad -->

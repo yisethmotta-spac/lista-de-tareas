@@ -189,7 +189,7 @@ const porcentajeProgreso = computed(() => {
 
       <TaskForm @agregar="agregarTarea"/>
 
-      <!-- NUEVO: Input para buscar tareas -->
+      <!-- Input para buscar tareas -->
       <div class="caja-busqueda" v-if="tareas.length > 0">
         <input 
           v-model="busqueda" 
