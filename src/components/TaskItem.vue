@@ -4,6 +4,12 @@ import { ref, computed } from 'vue';
 type Prioridad = 'baja' | 'media' | 'alta';
 type Categoria= 'general' | 'trabajo' | 'hogar'| 'estudio' | 'compras';
 
+interface subtarea {
+  id: number;
+  texto: string;
+  completada: boolean;
+}
+
 //Define la interfaz aquí también para que el componente sepa cómo luce una tarea
 // (La prioridad es opcional '?' para soportar tareas viejas que no la tenían)
 interface Tarea {
@@ -14,6 +20,7 @@ interface Tarea {
   archivada?: boolean; // Saber si la tarea está en el historial
   fechaVencimiento?: string;
   categoria?: Categoria;
+  subtareas?: subtarea[]; // Lista de subtareas
 }
 
 //DefineProps recibe los datos desde App.vue
@@ -26,11 +33,26 @@ const emit = defineEmits<{
   (e: 'eliminar', id: number): void;
   (e: 'cambiar-estado', id: number): void;
   (e: 'editar', id: number, nuevoTexto: string): void;
+  (e: 'agregar-subtarea', idTarea: number, textoSubtarea: string): void;
+  (e: 'cambiar-subtarea', idTarea: number, idSubtarea: number): void;
+  (e: 'eliminar-subtarea', idTarea: number, idSubtarea: number): void;
 }>();
 
 // Estado local para controlar si estamos editando esta tarea en específico
 const editando = ref(false);
 const textoEditado = ref(props.tarea.texto);
+const nuevaSubtarea = ref('');
+// Nombre esperado en template
+const nuevaSubtareaTexto = nuevaSubtarea;
+
+const manejarAgregarSubtarea = () => {
+  const texto = nuevaSubtarea.value && nuevaSubtarea.value.trim();
+  if (!texto) return;
+  emit('agregar-subtarea', props.tarea.id, texto);
+  nuevaSubtarea.value = '';
+};
+
+const mostrarSubtareas = ref(false);
 
 // Si la tarea no tiene prioridad asignada aún, usa 'media' por defecto para evitar fallos
 const prioridadEfectiva = props.tarea.prioridad || 'media';
@@ -84,60 +106,96 @@ const cancelarEdicion = () => {
 </script>
 
 <template>
-<!-- Se le asigna una clase según la prioridad para cambiar el borde de color -->
-  <li :class="['item-tarea', prioridadEfectiva, { archivada: tarea.archivada, vencida: estadoFecha?.tipo === 'vencida' }]">
-    
-    <!-- Solo muestra el checkbox si la tarea no está archivada -->
-    <input 
-      v-if="!tarea.archivada"
-      type="checkbox" 
-      :checked="tarea.completada" 
-      @change="emit('cambiar-estado', tarea.id)" 
-    />
-    <!--Icono de caja de archivo-->
-    <span v-else class="icono-archivo" title="Tarea en historial">📦</span>
-
-    <!-- Si está en modo edición muestra este input -->
-    <div v-if="editando" class="modo-edicion">
+  <li :class="['item-tarea-contenedor', { archivada: tarea.archivada }]">
+    <!-- Se le asigna una clase según la prioridad para cambiar el borde de color -->
+    <div :class="['item-tarea', prioridadEfectiva, { vencida: estadoFecha?.tipo === 'vencida' }]">
+      
+      <!-- Solo muestra el checkbox si la tarea no está archivada -->
       <input 
-        v-model="textoEditado" 
-        type="text" 
-        @keyup.enter="guardarEdicion"
-        @keyup.esc="cancelarEdicion"
+        v-if="!tarea.archivada"
+        type="checkbox" 
+        :checked="tarea.completada" 
+        @change="emit('cambiar-estado', tarea.id)" 
       />
-      <button class="btn-guardar" @click="guardarEdicion">💾</button>
-      <button class="btn-cancelar" @click="cancelarEdicion">❌</button>
-    </div>
+      <!--Icono de caja de archivo-->
+      <span v-else class="icono-archivo" title="Tarea en historial">📦</span>
 
-    <!-- Modo normal (mostrar texto y botones) -->
-    <template v-else>
-      <div class="contenido-tarea">
-        <span :class="{ tachado: tarea.completada || tarea.archivada }">
-          {{ tarea.texto }}
-        </span>
-
-        <!-- Muestra la etiqueta de fecha cuando existe -->
-        <span v-if="estadoFecha" :class="['insignia-fecha', estadoFecha.tipo]">
-          {{ estadoFecha.texto }}
-        </span>
+      <!-- Si está en modo edición muestra este input -->
+      <div v-if="editando" class="modo-edicion">
+        <input 
+          v-model="textoEditado" 
+          type="text" 
+          @keyup.enter="guardarEdicion"
+          @keyup.esc="cancelarEdicion"
+        />
+        <button class="btn-guardar" @click="guardarEdicion">💾</button>
+        <button class="btn-cancelar" @click="cancelarEdicion">❌</button>
       </div>
 
-      <!-- Insignia de Categoria -->
-      <span class="insignia-categoria">
-        {{ iconosCategoria[categoriaEfectiva] }}
-      </span>
+      <!-- Modo normal (mostrar texto y botones) -->
+      <template v-else>
+        <div class="contenido-tarea">
+          <span :class="{ tachado: tarea.completada || tarea.archivada }">
+            {{ tarea.texto }}
+          </span>
 
-      <!-- Insignia de Prioridad -->  
-      <span :class="['insignia-prioridad', prioridadEfectiva]">
-        {{ prioridadEfectiva.toUpperCase() }}
-      </span>
+          <!-- Muestra la etiqueta de fecha cuando existe -->
+          <span v-if="estadoFecha" :class="['insignia-fecha', estadoFecha.tipo]">
+            {{ estadoFecha.texto }}
+          </span>
+        </div>
 
-      <!--Oculta los botones de editar y eliminar cuando la tarea está archivada -->
-      <template v-if="!tarea.archivada">
-        <button class="btn-editar" @click="activarEdicion">✏️</button>
-        <button class="btn-eliminar" @click="emit('eliminar', tarea.id)">🗑️</button>
+        <!-- Insignia de Categoria -->
+        <span class="insignia-categoria">
+          {{ iconosCategoria[categoriaEfectiva] }}
+        </span>
+
+        <!-- Insignia de Prioridad -->  
+        <span :class="['insignia-prioridad', prioridadEfectiva]">
+          {{ prioridadEfectiva.toUpperCase() }}
+        </span>
+
+        <!--Oculta los botones de editar y eliminar cuando la tarea está archivada -->
+        <template v-if="!tarea.archivada">
+          <!-- Botón para desplegar/ocultar subtareas -->
+          <button 
+            class="btn-subtareas" 
+            @click="mostrarSubtareas = !mostrarSubtareas"
+            :title="mostrarSubtareas ? 'Ocultar subtareas' : 'Ver subtareas'"
+          >
+            📋 <small v-if="tarea.subtareas?.length">({{ tarea.subtareas.length }})</small>
+          </button>
+
+          <button class="btn-editar" @click="activarEdicion">✏️</button>
+          <button class="btn-eliminar" @click="emit('eliminar', tarea.id)">🗑️</button>
+        </template>
       </template>
-    </template>
+    </div>
+
+    <!-- Sección desplegable para ver y agregar subtareas -->
+    <div v-if="mostrarSubtareas && !tarea.archivada" class="seccion-subtareas">
+      <div class="crear-subtarea">
+        <input 
+          v-model="nuevaSubtareaTexto" 
+          type="text" 
+          placeholder="Añadir paso o subtarea..."
+          @keyup.enter="manejarAgregarSubtarea"
+        />
+        <button @click="manejarAgregarSubtarea">+</button>
+      </div>
+
+      <ul v-if="tarea.subtareas && tarea.subtareas.length > 0" class="lista-subtareas">
+        <li v-for="sub in tarea.subtareas" :key="sub.id" class="item-subtarea">
+          <input 
+            type="checkbox" 
+            :checked="sub.completada" 
+            @change="emit('cambiar-subtarea', tarea.id, sub.id)" 
+          />
+          <span :class="{ tachado: sub.completada }">{{ sub.texto }}</span>
+          <button class="btn-eliminar-sub" @click="emit('eliminar-subtarea', tarea.id, sub.id)">✕</button>
+        </li>
+      </ul>
+    </div>
   </li>
 </template>
 
