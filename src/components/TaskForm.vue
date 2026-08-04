@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'; 
+import { ref, computed } from 'vue'; 
 
 type Prioridad = 'baja' | 'media' | 'alta';
 
@@ -11,50 +11,90 @@ const emit = defineEmits<{
 const textoNuevaTarea = ref('');
 const prioridadSeleccionada = ref<Prioridad>('media'); // Valor por defecto
 const fechaSeleccionada = ref('');
+const mensajeError = ref('');
+
+// Obtiene la fecha de hoy en formato YYYY-MM-DD para el atributo min del calendar
+const fechaMinima = computed(() => {
+  const hoy = new Date();
+  const año = hoy.getFullYear();
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoy.getDate()).padStart(2, '0');
+  return `${año}-${mes}-${dia}`;
+});
 
 const manejarEnvio = () => {
+  mensajeError.value = '';
+
   if (textoNuevaTarea.value.trim() === '') return;
+
+  // Validación para impedir que se asignen fechas que ya pasaron
+  if (fechaSeleccionada.value) {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const [año, mes, dia] = fechaSeleccionada.value.split('-').map(Number);
+    const fechaTarea = new Date(año, mes - 1, dia);
+
+    if (fechaTarea < hoy) {
+      mensajeError.value = 'No se pueden agregar tareas para un día que ya pasó.';
+      return;
+    }
+  }
+
   //En vez de agregarla aquí, emite el evento con el texto y la prioridad para que App.vue lo reciba y agregue la tarea a la lista
   emit('Agregar', textoNuevaTarea.value, prioridadSeleccionada.value, fechaSeleccionada.value);
   textoNuevaTarea.value = '';
   prioridadSeleccionada.value = 'media'; // Reinicia la prioridad a la predeterminada
   fechaSeleccionada.value = '';
+  mensajeError.value = '';
 };
 </script>
 
 <template>
-  <div class="entrada-datos">
-    <input
-      v-model="textoNuevaTarea"
-      @keyup.enter="manejarEnvio"
-      type="text"
-      placeholder="¿Qué necesitas hacer hoy?"
-    />
-    
-    <!-- Selector de Prioridad -->
-    <select v-model="prioridadSeleccionada" class="select-prioridad">
-      <option value="baja">🟢 Baja</option>
-      <option value="media">🟡 Media</option>
-      <option value="alta">🔴 Alta</option>
-    </select>
+  <div class="contenedor-formulario">
+    <div class="entrada-datos">
+      <input
+        v-model="textoNuevaTarea"
+        @keyup.enter="manejarEnvio"
+        type="text"
+        placeholder="¿Qué necesitas hacer hoy?"
+      />
+      
+      <!-- Selector de Prioridad -->
+      <select v-model="prioridadSeleccionada" class="select-prioridad">
+        <option value="baja">🟢 Baja</option>
+        <option value="media">🟡 Media</option>
+        <option value="alta">🔴 Alta</option>
+      </select>
 
-    <!--Input para la Fecha de Vencimiento -->
-    <input 
-      v-model="fechaSeleccionada" 
-      type="date" 
-      class="input-fecha"
-      title="Fecha de vencimiento"
-    />
+      <!--Input para la Fecha de Vencimiento -->
+      <input 
+        v-model="fechaSeleccionada" 
+        :min="fechaMinima"
+        type="date" 
+        class="input-fecha"
+        title="Fecha de vencimiento"
+        @change="mensajeError = ''"
+      />
 
-    <button class="btn-agregar" @click="manejarEnvio">Agregar</button>
+      <button class="btn-agregar" @click="manejarEnvio">Agregar</button>
+    </div>
+
+    <!-- Mensaje de advertencia si la fecha es menor al día actual -->
+    <p v-if="mensajeError" class="mensaje-error">
+      ⚠️ {{ mensajeError }}
+    </p>
   </div>
 </template>
 
 <style scoped>
+.contenedor-formulario {
+  margin-bottom: 20px;
+}
+
 .entrada-datos {
   display: flex;
   gap: 8px;
-  margin-bottom: 20px;
   flex-wrap: wrap; /* Mantiene la flexibilidad si la pantalla es estrecha */
 }
 
@@ -97,5 +137,18 @@ button.btn-agregar {
 
 button.btn-agregar:hover {
   background-color: #33a06f;
+}
+
+.mensaje-error {
+  color: #ef4444;
+  font-size: 0.85em;
+  font-weight: 600;
+  margin: 6px 0 0 0;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>
